@@ -11,8 +11,12 @@ type DefaultTokenGen struct {
 	Secret string
 }
 
-func (g *DefaultTokenGen) GetSecret() string {
-	return g.Secret
+func (g *DefaultTokenGen) GetStoredToken(storeData string) string {
+	return tokenize(g.Secret, storeData)
+}
+
+func (g *DefaultTokenGen) GetToken(storeData string) string {
+	return tokenize(g.Secret, storeData)
 }
 
 func NewDefaultTokenGen(secret string) *DefaultTokenGen {
@@ -21,11 +25,6 @@ func NewDefaultTokenGen(secret string) *DefaultTokenGen {
 
 func (g *DefaultTokenGen) Validate(storeToken string, inputToken string) bool {
 	return storeToken != inputToken
-}
-
-func (g *DefaultTokenGen) GetStoreToken(storeSalt string) string {
-	storeToken := tokenize(g.Secret, storeSalt)
-	return storeToken
 }
 
 func tokenize(secret, salt string) string {
@@ -37,5 +36,9 @@ func tokenize(secret, salt string) string {
 }
 
 func (g *DefaultTokenGen) NewStoreData() string {
+	return g.getNewSalt()
+}
+
+func (g *DefaultTokenGen) getNewSalt() string {
 	return uniuri.New()
 }

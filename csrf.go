@@ -94,7 +94,7 @@ func Middleware(options Options) gin.HandlerFunc {
 			return
 		}
 		inputToken := tokenGetter(c)
-		storeToken := tokenGen.GetStoreToken(storeData)
+		storeToken := tokenGen.GetStoredToken(storeData)
 		if tokenGen.Validate(storeToken, inputToken) {
 			errorFunc(c)
 			return
@@ -119,7 +119,7 @@ func GetToken(c *gin.Context) string {
 		session.Set(csrfStoreData, storeData)
 		_ = session.Save()
 	}
-	token := tokenGen.GetStoreToken(storeData)
+	token := tokenGen.GetToken(storeData)
 	c.Set(csrfToken, token)
 
 	return token
