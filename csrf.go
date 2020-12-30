@@ -1,20 +1,14 @@
 package csrf
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
 	"errors"
-	"io"
-
-	"github.com/dchest/uniuri"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	csrfSecret = "csrfSecret"
-	csrfSalt   = "csrfSalt"
-	csrfToken  = "csrfToken"
+	csrfStoreData = "csrfStoreData"
+	csrfToken     = "csrfToken"
 )
 
 var defaultIgnoreMethods = []string{"GET", "HEAD", "OPTIONS"}
@@ -45,14 +39,7 @@ type Options struct {
 	IgnoreMethods []string
 	ErrorFunc     gin.HandlerFunc
 	TokenGetter   func(c *gin.Context) string
-}
-
-func tokenize(secret, salt string) string {
-	h := sha1.New()
-	io.WriteString(h, salt+"-"+secret)
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-
-	return hash
+	TokenGen      TokenGen
 }
 
 func inArray(arr []string, value string) bool {
@@ -73,6 +60,7 @@ func Middleware(options Options) gin.HandlerFunc {
 	ignoreMethods := options.IgnoreMethods
 	errorFunc := options.ErrorFunc
 	tokenGetter := options.TokenGetter
+	tokenGen := options.TokenGen
 
 	if ignoreMethods == nil {
 		ignoreMethods = defaultIgnoreMethods
@@ -86,25 +74,28 @@ func Middleware(options Options) gin.HandlerFunc {
 		tokenGetter = defaultTokenGetter
 	}
 
+	if tokenGen == nil {
+		tokenGen = NewDefaultTokenGen(options.Secret)
+	}
+
 	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		c.Set(csrfSecret, options.Secret)
+		c.Set("tokenGen", tokenGen)
 
 		if inArray(ignoreMethods, c.Request.Method) {
 			c.Next()
 			return
 		}
 
-		salt, ok := session.Get(csrfSalt).(string)
+		session := sessions.Default(c)
+		storeData, ok := session.Get(csrfStoreData).(string)
 
-		if !ok || len(salt) == 0 {
+		if !ok || len(storeData) == 0 {
 			errorFunc(c)
 			return
 		}
-
-		token := tokenGetter(c)
-
-		if tokenize(options.Secret, salt) != token {
+		inputToken := tokenGetter(c)
+		storeToken := tokenGen.GetStoreToken(storeData)
+		if tokenGen.Validate(storeToken, inputToken) {
 			errorFunc(c)
 			return
 		}
@@ -116,19 +107,19 @@ func Middleware(options Options) gin.HandlerFunc {
 // GetToken returns a CSRF token.
 func GetToken(c *gin.Context) string {
 	session := sessions.Default(c)
-	secret := c.MustGet(csrfSecret).(string)
+	tokenGen := c.MustGet("tokenGen").(TokenGen)
 
 	if t, ok := c.Get(csrfToken); ok {
 		return t.(string)
 	}
 
-	salt, ok := session.Get(csrfSalt).(string)
+	storeData, ok := session.Get(csrfStoreData).(string)
 	if !ok {
-		salt = uniuri.New()
-		session.Set(csrfSalt, salt)
-		session.Save()
+		storeData = tokenGen.NewStoreData()
+		session.Set(csrfStoreData, storeData)
+		_ = session.Save()
 	}
-	token := tokenize(secret, salt)
+	token := tokenGen.GetStoreToken(storeData)
 	c.Set(csrfToken, token)
 
 	return token
