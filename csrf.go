@@ -96,11 +96,11 @@ func Middleware(options Options) gin.HandlerFunc {
 		inputToken := tokenGetter(c)
 		storeToken := tokenGen.GetStoredToken(storeData)
 		if tokenGen.Validate(storeToken, inputToken) {
-			errorFunc(c)
+			c.Next()
 			return
 		}
 
-		c.Next()
+		errorFunc(c)
 	}
 }
 

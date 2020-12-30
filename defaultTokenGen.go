@@ -24,7 +24,7 @@ func NewDefaultTokenGen(secret string) *DefaultTokenGen {
 }
 
 func (g *DefaultTokenGen) Validate(storeToken string, inputToken string) bool {
-	return storeToken != inputToken
+	return storeToken == inputToken
 }
 
 func tokenize(secret, salt string) string {
