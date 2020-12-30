@@ -2,7 +2,9 @@
 
 CSRF protection middleware for [Gin]. This middleware has to be used with [gin-contrib/sessions](https://github.com/gin-contrib/sessions).
 
-Original credit to [tommy351](https://github.com/tommy351/gin-csrf), this fork makes it work with gin-gonic contrib sessions.
+Original credit to [tommy351](https://github.com/tommy351/gin-csrf), this fork is a fork repo from [utrack's fork](https://github.com/utrack/gin-csrf).
+
+This fork let user can implement their own token generation logic.
 
 ## Installation
 
